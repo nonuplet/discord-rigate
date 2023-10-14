@@ -1,13 +1,10 @@
 import Parser from "rss-parser";
 import * as fs from "fs";
 
-interface RssSource {
+export interface RssSource {
   title: string;
   rss: string;
-}
-
-export interface WebSite {
-  title: string;
+  channelId: string;
   feeds?: Feed[];
 }
 
@@ -24,8 +21,13 @@ export class RssReader {
     this.parser = new Parser();
   }
 
-  async getFeeds(): Promise<WebSite[]> {
-    const result = [] as WebSite[];
+  /**
+   * Get RSS feeds from rss.json
+   * (Only RSS1.0 supported)
+   * TODO: rss2
+   */
+  async getFeeds(): Promise<RssSource[]> {
+    const result = [] as RssSource[];
     const sources = JSON.parse(
       fs.readFileSync("rss.json", "utf8"),
     ) as RssSource[];
@@ -34,16 +36,17 @@ export class RssReader {
     for (const source of sources) {
       const data = await this.parser.parseURL(source.rss);
       // RSS1.0
-      const feeds = this.#parseRss1(data);
-
-      result.push({
-        title: source.title,
-        feeds,
-      });
+      source.feeds = this.#parseRss1(data);
+      result.push(source);
     }
     return result;
   }
 
+  /**
+   * Parse RSS1.0
+   * @param data raw object from Parser(rss-parser)
+   * @private
+   */
   #parseRss1(data: any): Feed[] {
     const result: Feed[] = [];
     for (const feed of data.items) {

@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { RssReader, type WebSite } from "./RssReader.js";
+import { RssReader, type RssSource } from "./RssReader.js";
 import { Client, GatewayIntentBits, hyperlink } from "discord.js";
 import { Rigate } from "./Rigate.ts";
 
@@ -12,7 +12,7 @@ const client = new Client({
 });
 
 const rigate = new Rigate(client);
-let websites: WebSite[];
+let websites: RssSource[];
 
 /// RSSデータの取得
 const readRss = async (): Promise<void> => {
@@ -25,22 +25,18 @@ const feedMsg = async (): Promise<void> => {
   for (const website of websites) {
     if (website.feeds === undefined) return;
 
-    if (process.env.TARGET_CHANNEL_ID === undefined) {
-      throw new Error("Invalid channel id");
-    }
-
     msg += "# " + website.title + "\n";
 
     for (const feed of website.feeds) {
       const line = hyperlink(feed.title, feed.link) + "\n\n";
       if (msg.length + line.length >= 2000) {
-        void rigate.sendMessage(process.env.TARGET_CHANNEL_ID, msg);
+        void rigate.sendMessage(website.channelId, msg);
         msg = line;
       } else {
         msg += line;
       }
     }
-    void rigate.sendMessage(process.env.TARGET_CHANNEL_ID, msg);
+    void rigate.sendMessage(website.channelId, msg);
   }
 };
 
