@@ -37,7 +37,6 @@ export class RssReader {
     // Get RSS
     for (const source of sources) {
       const data = await this.parser.parseURL(source.rss);
-      // RSS1.0
       if (source.version === 1) {
         source.feeds = this.#parseRss1(data);
       } else {
@@ -137,16 +136,18 @@ export class RssReader {
         if (!this.#checkFeed(feed, now, website.bannedWords)) continue;
 
         const line = "- " + hyperlink(feed.title, feed.link) + "\n";
-        if (message.length + line.length < 2000 && feedCount < 5) {
+        if (message.length + line.length < 2000 && feedCount < 6) {
           message += line;
           feedCount++;
         } else {
           await rigate.sendMessage(website.channelId, message);
           message = line;
-          feedCount = 0;
+          feedCount = 1;
         }
       }
-      await rigate.sendMessage(website.channelId, message);
+      if (feedCount > 0) {
+        await rigate.sendMessage(website.channelId, message);
+      }
     }
   }
 }
