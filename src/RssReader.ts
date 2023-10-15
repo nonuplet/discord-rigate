@@ -1,5 +1,7 @@
 import Parser from "rss-parser";
 import * as fs from "fs";
+import { hyperlink } from "discord.js";
+import { type Rigate } from "./Rigate.js";
 
 export interface RssSource {
   title: string;
@@ -26,7 +28,7 @@ export class RssReader {
    * (Only RSS1.0 supported)
    * TODO: rss2
    */
-  async getFeeds(): Promise<RssSource[]> {
+  async #getFeeds(): Promise<RssSource[]> {
     const result = [] as RssSource[];
     const sources = JSON.parse(
       fs.readFileSync("rss.json", "utf8"),
@@ -56,7 +58,32 @@ export class RssReader {
         link: feed.link,
       });
     }
-    console.log(result);
     return result;
+  }
+
+  /**
+   * Send feed message to discord channel
+   */
+  async sendFeedMessage(rigate: Rigate): Promise<void> {
+    // get feeds
+    const websites = await this.#getFeeds();
+
+    // build & send messages
+    let message = "";
+    for (const website of websites) {
+      if (website.feeds === undefined) return;
+      message += "# " + website.title + "\n";
+
+      for (const feed of website.feeds) {
+        const line = "- " + hyperlink(feed.title, feed.link) + "\n\n";
+        if (message.length + line.length >= 2000) {
+          await rigate.sendMessage(website.channelId, message);
+          message = line;
+        } else {
+          message += line;
+        }
+      }
+      await rigate.sendMessage(website.channelId, message);
+    }
   }
 }
