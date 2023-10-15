@@ -7,6 +7,7 @@ export interface RssSource {
   title: string;
   rss: string;
   channelId: string;
+  bannedWords: string[];
   feeds?: Feed[];
 }
 
@@ -62,6 +63,22 @@ export class RssReader {
   }
 
   /**
+   * Check feed title
+   * @param title Feed title
+   * @param bannedWords Banned words from rss.json
+   * @private
+   */
+  #checkFeed(title: string, bannedWords: string[] | undefined): boolean {
+    if (bannedWords === undefined) return true;
+    for (const banned of bannedWords) {
+      if (title.includes(banned)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * Send feed message to discord channel
    */
   async sendFeedMessage(rigate: Rigate): Promise<void> {
@@ -74,13 +91,19 @@ export class RssReader {
       if (website.feeds === undefined) return;
       message += "# " + website.title + "\n";
 
+      let feedCount = 0;
+
       for (const feed of website.feeds) {
-        const line = "- " + hyperlink(feed.title, feed.link) + "\n\n";
-        if (message.length + line.length >= 2000) {
+        if (!this.#checkFeed(feed.title, website.bannedWords)) continue;
+
+        const line = "- " + hyperlink(feed.title, feed.link) + "\n";
+        if (message.length + line.length < 2000 && feedCount < 5) {
+          message += line;
+          feedCount++;
+        } else {
           await rigate.sendMessage(website.channelId, message);
           message = line;
-        } else {
-          message += line;
+          feedCount = 0;
         }
       }
       await rigate.sendMessage(website.channelId, message);
