@@ -6,6 +6,7 @@ import { type Rigate } from "./Rigate.js";
 export interface RssSource {
   title: string;
   rss: string;
+  version: number;
   channelId: string;
   bannedWords: string[];
   feeds?: Feed[];
@@ -26,8 +27,6 @@ export class RssReader {
 
   /**
    * Get RSS feeds from rss.json
-   * (Only RSS1.0 supported)
-   * TODO: rss2
    */
   async #getFeeds(): Promise<RssSource[]> {
     const result = [] as RssSource[];
@@ -39,7 +38,11 @@ export class RssReader {
     for (const source of sources) {
       const data = await this.parser.parseURL(source.rss);
       // RSS1.0
-      source.feeds = this.#parseRss1(data);
+      if (source.version === 1) {
+        source.feeds = this.#parseRss1(data);
+      } else {
+        source.feeds = this.#parseRss2(data);
+      }
       result.push(source);
     }
     return result;
@@ -55,7 +58,19 @@ export class RssReader {
     for (const feed of data.items) {
       result.push({
         title: feed.title,
-        date: feed.date,
+        date: new Date(feed.date),
+        link: feed.link,
+      });
+    }
+    return result;
+  }
+
+  #parseRss2(data: any): Feed[] {
+    const result: Feed[] = [];
+    for (const feed of data.items) {
+      result.push({
+        title: feed.title,
+        date: new Date(feed.pubDate),
         link: feed.link,
       });
     }
@@ -63,15 +78,26 @@ export class RssReader {
   }
 
   /**
-   * Check feed title
-   * @param title Feed title
+   * Check feed
+   * @param feed Target feed
+   * @param now Current Date Object
    * @param bannedWords Banned words from rss.json
    * @private
    */
-  #checkFeed(title: string, bannedWords: string[] | undefined): boolean {
+  #checkFeed(
+    feed: Feed,
+    now: Date,
+    bannedWords: string[] | undefined,
+  ): boolean {
+    // Check pubDate
+    if ((now.getTime() - feed.date.getTime()) / (1000 * 60 * 60 * 24) > 1) {
+      return false;
+    }
+
+    // Check banned words
     if (bannedWords === undefined) return true;
     for (const banned of bannedWords) {
-      if (title.includes(banned)) {
+      if (feed.title.includes(banned)) {
         return false;
       }
     }
@@ -84,17 +110,31 @@ export class RssReader {
   async sendFeedMessage(rigate: Rigate): Promise<void> {
     // get feeds
     const websites = await this.#getFeeds();
+    const now = new Date();
+    const nowString =
+      now.toLocaleDateString("ja-JP", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }) +
+      " " +
+      now.toLocaleTimeString("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
 
     // build & send messages
-    let message = "";
     for (const website of websites) {
-      if (website.feeds === undefined) return;
-      message += "# " + website.title + "\n";
+      let message = "";
+      if (website.feeds === undefined) continue;
 
+      message += "# " + website.title + "\n";
+      message += "### Updated: " + nowString + "\n";
       let feedCount = 0;
 
       for (const feed of website.feeds) {
-        if (!this.#checkFeed(feed.title, website.bannedWords)) continue;
+        if (!this.#checkFeed(feed, now, website.bannedWords)) continue;
 
         const line = "- " + hyperlink(feed.title, feed.link) + "\n";
         if (message.length + line.length < 2000 && feedCount < 5) {
