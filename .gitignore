@@ -25,3 +25,5 @@ dist-ssr
 
 .env
 rss.json
+.parcel-cache
+deploy-cloud-function.sh
