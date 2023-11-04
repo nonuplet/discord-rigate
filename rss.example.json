@@ -1,0 +1,21 @@
+[
+  {
+    "title": "PC NEWS",
+    "rss": "https://example.com",
+    "version": 1,
+    "channelId": "123456789",
+    "bannedWords": [
+      "foo",
+      "bar"
+    ]
+  },
+  {
+    "title": "Audio NEWS",
+    "rss": "https://example.com",
+    "version": 2,
+    "channelId": "123456789",
+    "bannedWords": [
+      "baz"
+    ]
+  }
+]
