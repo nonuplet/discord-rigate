@@ -1,5 +1,9 @@
-*
-!/dist/**
-!package.json
-!rss.json
-!yarn.lock
+.idea
+.parcel-cache
+node_modules
+src
+.env
+.eslintrc.cjs
+.gitignore
+deploy-cloud-function.sh
+tsconfig.json

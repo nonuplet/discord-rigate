@@ -1,4 +1,4 @@
-import "dotenv/config";
+import * as dotenv from "dotenv";
 import { RssReader } from "./RssReader.js";
 import { Client, GatewayIntentBits } from "discord.js";
 import { Rigate } from "./Rigate.js";
@@ -6,6 +6,8 @@ import * as ff from "@google-cloud/functions-framework";
 
 ff.http("RigateFunction", async (req: ff.Request, res: ff.Response) => {
   try {
+    dotenv.config();
+
     const client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
